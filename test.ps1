@@ -13,9 +13,10 @@ $output_directory = ".\DATAS\"
 $dirname = "yyyyMM"
 $filename = "yyyyMMdd"
 
+$dayfolder = $dirname + $output_directory
 
 $MHEdate = (Get-Date).tostring("yyyyMMddHHmmss") # example output 20161122. 
-$OutputDir = ".\DATAS\"
+
 $logoname = 'LOG' + $MHEdate + '.csv'
 $OutputFile1 = Join-Path $output_directory $logoname
 "query output file is ---> " > $OutputFile1
@@ -25,6 +26,12 @@ $stopwatch = [system.diagnostics.stopwatch]::StartNew()
 
 $servers = "127.0.0.1", "34.2.3.1", "234.1.0.1"
 
+if (Test-Path -Path $dayfolder) {
+    "Path exists!"
+}
+else {
+    "Path doesn't exist."
+}
 
 do {
     #Test the computer ping.
@@ -41,6 +48,8 @@ do {
  
             if ($null -ne $read_return) {
                 Write-Host "Succesfully read from MODBUS client." -ForegroundColor Green
+                Write-Host "Computer: " $computername " Date: " $((Get-Date).ToString())
+                Write-Host "Readed data: " $read_return
             }
             else {
                 Write-Host "No read from MODBUS client." -ForegroundColor Red
