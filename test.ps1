@@ -2,35 +2,63 @@
 . .\PsModbusTcp.ps1
 
 
-Greet-User -Name "MODBUS reading program START."
+"MODBUS READING PROGRAM START:" 
+"Date and time is: $((Get-Date).ToString())"
+
+#Arguments from command line.
+$computername = "127.0.0.1"
+$portnumber = "502"
+$MODBUS_address = '0'
+$output_directory = ".\DATAS\"
+$dirname = "yyyyMM"
+$filename = "yyyyMMdd"
+
+
+$MHEdate = (Get-Date).tostring("yyyyMMddHHmmss") # example output 20161122. 
+$OutputDir = ".\DATAS\"
+$logoname = 'LOG' + $MHEdate + '.csv'
+$OutputFile1 = Join-Path $output_directory $logoname
+"query output file is ---> " > $OutputFile1
 
 $stopwatch = [system.diagnostics.stopwatch]::StartNew()
 #$stopwatch.Elapsed
 
 $servers = "127.0.0.1", "34.2.3.1", "234.1.0.1"
 
+
 do {
+    #Test the computer ping.
+    Write-Host "MODBUS cliens pinging " $computername
+    #    $test_ping = Test-Connection -Count 1 -Delay 1 -Quiet -ComputerName $computername
+    #    $test_ping = Test-NetConnection -Port $portnumber -ComputerName $computername
+    if (1) {
+        Write-Host "Ping succeed." -ForegroundColor Green 
+        $cont_dataread = 1
+        do {
+
+            Start-Sleep -Milliseconds 1000
+            $read_return = Read-HoldingRegisters -Address $computername -Port $portnumber -Reference $MODBUS_address -Num 8
  
-    for ($i = 0; $i -lt $servers.Length; $i++) {
+            if ($null -ne $read_return) {
+                Write-Host "Succesfully read from MODBUS client." -ForegroundColor Green
+            }
+            else {
+                Write-Host "No read from MODBUS client." -ForegroundColor Red
+                $cont_dataread = 0
+            }
+        }while ($cont_dataread)
 
-        Write-Host "MODBUS cliens pinging " + $servers[$i]
-        $share = Test-Connection -Count 1 -Delay 1 -Quiet -ComputerName $servers[$i]
-        if ($share) {
-            "command succeeded"
-            $share #| Foreach-Object { ... }
-        }
-        else {
-            "command failed"
-        }
-        #Write-Host "MODBUS cliensek pingelése " + $servers[$i]
-        #    Test-Connection -ComputerName $servers[$i] -Count 2
+
     }
+    else {
+        Write-Host "Ping failed." -ForegroundColor Red
+    }
+    #Write-Host "MODBUS cliensek pingelése " + $servers[$i]
+    #    Test-Connection -ComputerName $servers[$i] -Count 2
 
+    
 
-
-    Start-Sleep -Milliseconds 1000
-
-}while (0)
+}while (1)
 
 
 
