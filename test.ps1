@@ -1,37 +1,49 @@
 # "Functions loading."
 . .\PsModbusTcp.ps1
 
-
-"MODBUS READING PROGRAM START:" 
-"Date and time is: $((Get-Date).ToString())"
-
 #Arguments from command line.
 $computername = "127.0.0.1"
 $portnumber = "502"
 $MODBUS_address = '0'
 $output_directory = ".\DATAS\"
-$dirname = "yyyyMM"
+$dirname = "DATASyyyyMM"
 $filename = "yyyyMMdd"
 
-$dayfolder = $dirname + $output_directory
-
 $MHEdate = (Get-Date).tostring("yyyyMMddHHmmss") # example output 20161122. 
+$YMdir = (Get-Date).tostring($dirname)
+$YMDdir = (Get-Date).tostring($filename)
 
 $logoname = 'LOG' + $MHEdate + '.csv'
-$OutputFile1 = Join-Path $output_directory $logoname
-"query output file is ---> " > $OutputFile1
 
 $stopwatch = [system.diagnostics.stopwatch]::StartNew()
 #$stopwatch.Elapsed
 
-$servers = "127.0.0.1", "34.2.3.1", "234.1.0.1"
+for ( $i = 0; $i -lt $args.count; $i++ ) {
+    if ($args[ $i ] -eq "-c") { $computername = $args[ $i + 1 ] }
+    if ($args[ $i ] -eq "-p") { $portnumber = $args[ $i + 1 ] }
+    if ($args[ $i ] -eq "-d") { $dirname = $args[ $i + 1 ] }
+    if ($args[ $i ] -eq "-f") { $filename = $args[ $i + 1 ] }
+}
 
-if (Test-Path -Path $dayfolder) {
-    "Path exists!"
+"MODBUS READING PROGRAM START:" 
+"Date and time is: $((Get-Date).ToString())"
+
+$dayfolder = $dirname + $output_directory
+# .\Path
+function MakePathIfNoExist {
+    param (
+        [Parameter(Mandatory = $true)][string]$PathString
+    )
+    if (Test-Path -Path "$PathString") {
+        "$PathString exists!"
+    }
+    else {
+        "$YMdir doesn't exist Create:"
+        New-Item -Path "$PathString" -ItemType Directory
+    }
 }
-else {
-    "Path doesn't exist."
-}
+
+
 
 do {
     #Test the computer ping.
@@ -50,6 +62,9 @@ do {
                 Write-Host "Succesfully read from MODBUS client." -ForegroundColor Green
                 Write-Host "Computer: " $computername " Date: " $((Get-Date).ToString())
                 Write-Host "Readed data: " $read_return
+                # here to write to file
+                MakePathIfNoExist -PathString ".\$YMdir"
+
             }
             else {
                 Write-Host "No read from MODBUS client." -ForegroundColor Red
