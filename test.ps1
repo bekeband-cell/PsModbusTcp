@@ -6,14 +6,8 @@ $computername = "127.0.0.1"
 $portnumber = "502"
 $MODBUS_address = '0'
 $output_directory = ".\DATAS\"
-$dirname = "DATASyyyyMM"
-$filename = "yyyyMMdd"
-
-$MHEdate = (Get-Date).tostring("yyyyMMddHHmmss") # example output 20161122. 
-$YMdir = (Get-Date).tostring($dirname)
-$YMDdir = (Get-Date).tostring($filename)
-
-$logoname = 'LOG' + $MHEdate + '.csv'
+$dirname = "yyyyMM"
+$filename = $dirname + "dd"
 
 $stopwatch = [system.diagnostics.stopwatch]::StartNew()
 #$stopwatch.Elapsed
@@ -40,9 +34,9 @@ function MakePathIfNoExist {
     else {
         "$YMdir doesn't exist Create:"
         New-Item -Path "$PathString" -ItemType Directory
+
     }
 }
-
 
 
 do {
@@ -63,7 +57,23 @@ do {
                 Write-Host "Computer: " $computername " Date: " $((Get-Date).ToString())
                 Write-Host "Readed data: " $read_return
                 # here to write to file
-                MakePathIfNoExist -PathString ".\$YMdir"
+                # filename making
+                $MHEdate = (Get-Date).tostring("yyyyMMddHHmmss") # example output 20161122. 
+                $YMdir = $output_directory + (Get-Date).tostring($dirname)
+                $YMDdir = $YMdir + '\' + (Get-Date).tostring($filename)
+                
+                $logoname = $YMDdir + '.csv'
+
+
+                MakePathIfNoExist -PathString "$YMdir"
+
+                if (Test-Path -Path "$logoname") {
+                    "$logoname exists!"
+                } else {
+                    New-Item -Path . -Name "$logoname" -ItemType "file" -Value "This is a text string."
+                    #                MakePathIfNoExist -PathString "$logoname"
+                }
+
 
             }
             else {
