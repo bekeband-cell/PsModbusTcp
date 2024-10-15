@@ -8,14 +8,14 @@ $MODBUS_address = '0'
 $output_directory = ".\DATAS\"
 $dirname = "yyyyMM"
 $filename = $dirname + "dd"
-$samplesec = 1    # sample times (1..30 x10 sec)
-$samplecount = 30 # data save in sample times(6..24 x sample time)
+$samplesec = 6    # sample times (1..6 Sample per minute)
+$samplecount = 3 # data save in sample times(6..24 x sample time)
 
 $datacounter = 0
 
 # We are assume that 8 channels datas from MODBUS.
-$fileheader = "Date`tChan1`tChan2`tChan3`tChan4`tChan5`tChan6`tChan7`tChan8`n"
-# $fileheader = "Date Chan1 Chan2 Chan3 Chan4 Chan5 Chan6 Chan7 Chan8`n"
+# $fileheader = "Date`tChan1`tChan2`tChan3`tChan4`tChan5`tChan6`tChan7`tChan8`n"
+$fileheader = "Date,Chan1,Chan2,Chan3,Chan4,Chan5,Chan6,Chan7,Chan8`n"
 
 #$stopwatch = [system.diagnostics.stopwatch]::StartNew()
 #$stopwatch.Elapsed
@@ -60,7 +60,7 @@ for ( $i = 0; $i -lt $args.count; $i++ ) {
         Write-Debug("FileName = $filename")
     }
     if ($args[ $i ] -eq "-g") { 
-        $samplesec = MinMaxSetting 1 30 $args[ $i + 1 ]
+        $samplesec = MinMaxSetting 1 6 $args[ $i + 1 ]
         Write-Debug("Samplesec = $samplesec")
     }
     if ($args[ $i ] -eq "-j") { 
@@ -82,9 +82,17 @@ for ( $i = 0; $i -lt $args.count; $i++ ) {
 
 $outstring = ""
 
+$DebugPreference = "SilentlyContinue"
+$DebugPreference = "Continue"
+
+$secstep = 60 / $samplesec
+Write-Debug("SecStep = $secstep")
+$nextsamplesec = 0
+$samplesec_counter = 0
+
 $read_return = @( 1, 2, 3, 4, 5, 6, 7, 8 )
 foreach ($data in $read_return) {
-    $outstring += '`t' + $data
+    $outstring += ',' + $data
 }
 
 "MODBUS READING PROGRAM START:" 
@@ -107,71 +115,81 @@ function MakePathIfNoExist {
 
 do {
     # Sleep samplesec times
-    Start-Sleep -Milliseconds ($samplesec * 1000)
-    #    Test the computer ping.
-    Write-Host "$computername pinging."
-    $test_ping = Test-Connection -Count 1 -Delay 1 -Quiet -ComputerName $computername
+    #    Start-Sleep -Milliseconds ($samplesec * 1000)
+    $second = (Get-Date).Second
+   
+    if ($second -eq ($nextsamplesec)) {
 
-    if ($test_ping) {
-        Write-Host "$computername ping: " -NoNewline
-        Write-Host " OK." -ForegroundColor Green
-        $read_return = Read-HoldingRegisters -Address $computername -Port $portnumber -Reference $MODBUS_address -Num 8
+        $nextsamplesec = ++$samplesec_counter * $secstep
+        if ($samplesec_counter -eq $samplesec) {
+            $samplesec_counter = 0
+            $nextsamplesec = 0
+        }
+        Write-Debug "Second = $second"
+        #    Test the computer ping.
+        Write-Host "$computername pinging."
+        $test_ping = Test-Connection -Count 1 -Delay 1 -Quiet -ComputerName $computername
+
+        if ($test_ping) {
+            Write-Host "$computername ping: " -NoNewline
+            Write-Host " OK." -ForegroundColor Green
+            $read_return = Read-HoldingRegisters -Address $computername -Port $portnumber -Reference $MODBUS_address -Num 8
             
-        if ($null -ne $read_return) {
-            Write-Host "Succesfully read from MODBUS client." -ForegroundColor Green
+            if ($null -ne $read_return) {
+                Write-Host "Succesfully read from MODBUS client." -ForegroundColor Green
 
-            if ($datacounter -lt $samplecount) {
-                $datacounter++
-            }
-            else {
-                $datacounter = 0
-                Write-Host "Computer: " $computername " Date: " $((Get-Date).ToString())
-
-                Write-Debug "datacounter = samplecount. Write csv file."
-                $YMdir = $output_directory + (Get-Date).tostring($dirname)
-                $YMDdir = $YMdir + '\' + (Get-Date).tostring($filename)
-                    
-                $logoname = $YMDdir + '.csv'
-    
-                MakePathIfNoExist -PathString "$YMdir"
-    
-                if (Test-Path -Path "$logoname") {
-                    Write-Debug "$logoname exists!"
-                    $datestring = Get-Date -Format "yyyy.MM.dd HH:mm:ss"
-                    $outstring = $datestring + $read_return
-                    foreach ($data in $read_return) {
-
-                    }
-                    Add-Content -Path $logoname -Value $outstring
+                if ($datacounter -lt $samplecount) {
+                    $datacounter++
                 }
                 else {
-                    New-Item -Path . -Name "$logoname" -ItemType "file" -Value "$fileheader"
-                    #                MakePathIfNoExist -PathString "$logoname"
+                    $datacounter = 0
+                    Write-Host "Computer: " $computername " Date: " $((Get-Date).ToString())
+
+                    Write-Debug "datacounter = samplecount. Write csv file."
+                    $YMdir = $output_directory + (Get-Date).tostring($dirname)
+                    $YMDdir = $YMdir + '\' + (Get-Date).tostring($filename)
+                    
+                    $logoname = $YMDdir + '.csv'
+    
+                    MakePathIfNoExist -PathString "$YMdir"
+    
+                    if (Test-Path -Path "$logoname") {
+                        Write-Debug "$logoname exists!"
+                        $datestring = Get-Date -Format "yyyy.MM.dd HH:mm:ss"
+                        $outstring = $datestring
+                        foreach ($data in $read_return) {
+                            $outstring += ',' + $data
+                        }
+                        Add-Content -Path $logoname -Value $outstring
+                    }
+                    else {
+                        New-Item -Path . -Name "$logoname" -ItemType "file" -Value "$fileheader"
+                        #                MakePathIfNoExist -PathString "$logoname"
+                    }
+
                 }
 
-            }
-
-            Write-Host "Readed data: " $read_return
-            # here to write to file
-            # filename making
+                Write-Host "Readed data: " $read_return
+                # here to write to file
+                # filename making
                  
+
+            }
+            else {
+                Write-Host "No read from MODBUS client." -ForegroundColor Red
+                $datacounter = 0
+            }
 
         }
         else {
-            Write-Host "No read from MODBUS client." -ForegroundColor Red
+            Write-Debug "$computername ping" -NoNewline
+            Write-Debug "Eerror!" -ForegroundColor Red
             $datacounter = 0
         }
-
+        #Write-Host "MODBUS cliensek pingelése " + $servers[$i]
+        #    Test-Connection -ComputerName $servers[$i] -Count 2
+    
     }
-    else {
-        Write-Debug "$computername ping" -NoNewline
-        Write-Debug "Eerror!" -ForegroundColor Red
-        $datacounter = 0
-    }
-    #Write-Host "MODBUS cliensek pingelése " + $servers[$i]
-    #    Test-Connection -ComputerName $servers[$i] -Count 2
-
-
 }while (1)
 
 
