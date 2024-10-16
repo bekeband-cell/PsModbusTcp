@@ -127,18 +127,27 @@ do {
         }
         Write-Debug "Second = $second"
         #    Test the computer ping.
-        Write-Host "$computername pinging."
+        Write-Debug "$computername pinging."
         $test_ping = Test-Connection -Count 1 -Delay 1 -Quiet -ComputerName $computername
 
         if ($test_ping) {
-            Write-Host "$computername ping: " -NoNewline
-            Write-Host " OK." -ForegroundColor Green
+            Write-Debug "$computername ping: " 
+            $datestring = Get-Date -Format "yyyy.MM.dd HH:mm:ss"
+            Write-Debug " OK. $datestring" 
             $read_return = Read-HoldingRegisters -Address $computername -Port $portnumber -Reference $MODBUS_address -Num 8
             
             if ($null -ne $read_return) {
-                Write-Host "Succesfully read from MODBUS client." -ForegroundColor Green
-
+                $datestring = Get-Date -Format "yyyy.MM.dd HH:mm:ss"
+                Write-Debug "Succesfully read from MODBUS client. $datestring" 
                 if ($datacounter -lt $samplecount) {
+                    Write-Debug "DataCounter: $datacounter" 
+                }
+                else {
+                    $datacounter = 0
+                    Write-Debug "Write trend file: "
+                }
+                $datacounter++
+                <#                if ($datacounter -lt $samplecount) {
                     $datacounter++
                 }
                 else {
@@ -169,9 +178,9 @@ do {
 
                 }
 
-                Write-Host "Readed data: " $read_return
-                # here to write to file
-                # filename making
+            Write-Host "Readed data: " $read_return
+            # here to write to file
+            # filename making#>
                  
 
             }
@@ -183,7 +192,7 @@ do {
         }
         else {
             Write-Debug "$computername ping" -NoNewline
-            Write-Debug "Eerror!" -ForegroundColor Red
+            Write-Debug "Error!" -ForegroundColor Red
             $datacounter = 0
         }
         #Write-Host "MODBUS cliensek pingelése " + $servers[$i]
