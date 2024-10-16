@@ -145,6 +145,28 @@ do {
                 else {
                     $datacounter = 0
                     Write-Debug "Write trend file: "
+                    Write-Host "Computer: " $computername " Date: " $((Get-Date).ToString())
+                    Write-Debug "datacounter = samplecount. Write csv file."
+                    $YMdir = $output_directory + (Get-Date).tostring($dirname)
+                    $YMDdir = $YMdir + '\' + (Get-Date).tostring($filename)
+                    
+                    $logoname = $YMDdir + '.csv'
+    
+                    MakePathIfNoExist -PathString "$YMdir"
+                    if (Test-Path -Path "$logoname") {
+                        Write-Debug "$logoname exists!"
+                        $datestring = Get-Date -Format "yyyy.MM.dd HH:mm:ss"
+                        $outstring = $datestring
+                        foreach ($data in $read_return) {
+                            $outstring += ',' + $data
+                        }
+                        Add-Content -Path $logoname -Value $outstring
+                    }
+                    else {
+                        New-Item -Path . -Name "$logoname" -ItemType "file" -Value "$fileheader"
+                        #                MakePathIfNoExist -PathString "$logoname"
+                    }
+
                 }
                 $datacounter++
                 <#                if ($datacounter -lt $samplecount) {
