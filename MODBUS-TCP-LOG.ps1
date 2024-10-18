@@ -2,7 +2,7 @@
 . .\PsModbusTcp.ps1
 
 #Arguments from command line. These are default value as well.
-$computername = "localhost"
+$computername = "172.30.10.244"
 $portnumber = "502"
 $MODBUS_address = '0'
 $output_directory = ".\DATAS\"
@@ -113,6 +113,27 @@ function MakePathIfNoExist {
     }
 }
 
+Write-Host "$computername pinging."
+$test_ping = Test-Connection -Count 1 -Delay 1 -Quiet -ComputerName $computername
+if ($test_ping) {
+    Write-Host "Test ping succesfully : "
+    $read_mac_address = Read-HoldingRegisters -Address $computername -Port $portnumber -Reference 517 -Num 6
+    if ($null -ne $read_mac_address) { 
+        Write-Host "Test read MAC addres: $read_mac_address" 
+    }
+    else {
+        Write-Host "Test read MAC addres not succesfully!" 
+    }
+}
+else {
+    Write-Host "Test ping failure!" 
+}
+
+
+Start-Sleep -s 5
+
+Write-Host "Test read MAC addres not succesfully!" 
+
 do {
     # Sleep samplesec times
     #    Start-Sleep -Milliseconds ($samplesec * 1000)
@@ -131,14 +152,15 @@ do {
         $test_ping = Test-Connection -Count 1 -Delay 1 -Quiet -ComputerName $computername
 
         if ($test_ping) {
-            Write-Debug "$computername ping: " 
+
             $datestring = Get-Date -Format "yyyy.MM.dd HH:mm:ss"
-            Write-Debug " OK. $datestring" 
+            Write-Debug "$computername ping: OK. Date: $datestring" 
+            
             $read_return = Read-HoldingRegisters -Address $computername -Port $portnumber -Reference $MODBUS_address -Num 8
             
             if ($null -ne $read_return) {
                 $datestring = Get-Date -Format "yyyy.MM.dd HH:mm:ss"
-                Write-Debug "Succesfully read from MODBUS client. $datestring" 
+                Write-Debug "Succesfully read from MODBUS client. $datestring Readed datas: $read_return" 
                 if ($datacounter -lt $samplecount) {
                     Write-Debug "DataCounter: $datacounter" 
                 }
@@ -213,8 +235,8 @@ do {
 
         }
         else {
-            Write-Debug "$computername ping" -NoNewline
-            Write-Debug "Error!" -ForegroundColor Red
+            Write-Debug "$computername ping" 
+            Write-Debug "Error!" 
             $datacounter = 0
         }
         #Write-Host "MODBUS cliensek pingelése " + $servers[$i]
