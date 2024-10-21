@@ -10,11 +10,15 @@ $dirname = "yyyyMM"
 $filename = $dirname + "dd"
 $samplesec = 6    # sample times (1..6 Sample per minute)
 $samplecount = 3 # data save in sample times(6..24 x sample time)
+$samplechannels = 8
+$ma4_value = 0
+$ma20_value = 20000
+$ppm0mA = 0
+$ppm20mA = 0.2
 
 $datacounter = 0
 
 # We are assume that 8 channels datas from MODBUS.
-# $fileheader = "Date`tChan1`tChan2`tChan3`tChan4`tChan5`tChan6`tChan7`tChan8`n"
 $fileheader = "Date,Chan1,Chan2,Chan3,Chan4,Chan5,Chan6,Chan7,Chan8`n"
 
 #$stopwatch = [system.diagnostics.stopwatch]::StartNew()
@@ -63,6 +67,10 @@ for ( $i = 0; $i -lt $args.count; $i++ ) {
         $samplesec = MinMaxSetting 1 6 $args[ $i + 1 ]
         Write-Debug("Samplesec = $samplesec")
     }
+    if ($args[ $i ] -eq "-l") { 
+        $samplechannels = MinMaxSetting 1 8 $args[ $i + 1 ]
+        Write-Debug("Samplechannels = $samplechannels")
+    }
     if ($args[ $i ] -eq "-j") { 
         $samplecount = MinMaxSetting 2 24 $args[ $i + 1 ] 
         Write-Debug("Samplecount = $samplecount")
@@ -89,11 +97,6 @@ $secstep = 60 / $samplesec
 Write-Debug("SecStep = $secstep")
 $nextsamplesec = 0
 $samplesec_counter = 0
-
-$read_return = @( 1, 2, 3, 4, 5, 6, 7, 8 )
-foreach ($data in $read_return) {
-    $outstring += ',' + $data
-}
 
 "MODBUS READING PROGRAM START:" 
 "Date and time is: $((Get-Date).ToString())"
