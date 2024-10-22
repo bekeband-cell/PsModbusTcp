@@ -11,12 +11,14 @@ $filename = $dirname + "dd"
 $samplesec = 6    # sample times (1..6 Sample per minute)
 $samplecount = 3 # data save in sample times(6..24 x sample time)
 $samplechannels = 8
-$ma4_value = 0
-$ma20_value = 20000
-$ppm0mA = 0
-$ppm20mA = 0.2
 
-$datacounter = 0
+$ma4_values = 0, 0, 0, 0, 0, 0, 0
+$ma20_values = 20000, 20000, 20000, 20000, 20000, 20000, 20000, 20000
+$dim0mAvalues = 0, 0, 0, 0, 0, 0, 0, 0
+$dim20mAvalues = 0.4, 0.3, 10, 1.3, 0.3, 0.3, 0.4, 0.5
+
+
+[int32[][]]$channel_datas
 
 # We are assume that 8 channels datas from MODBUS.
 $fileheader = "Date,Chan1,Chan2,Chan3,Chan4,Chan5,Chan6,Chan7,Chan8`n"
