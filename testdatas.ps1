@@ -8,13 +8,15 @@ $maxvalues = 0, 0, 0, 0, 0, 0, 0, 0
 $minvalues = 20000, 20000, 20000, 20000, 20000, 20000, 20000, 20000
 $integralvalues = 0, 0, 0, 0, 0, 0, 0, 0
 $avervalues = 0, 0, 0, 0, 0, 0, 0, 0
-$averagestrategy = 0, 1, 0, 1, 0, 0, 0, 0
+$averagestrategy = 2, 1, 2, 2, 2, 0, 0, 0
 $samplechannels = 8
 $samplecount = 3
 $one_channel = @(0, 0, 0, 0, 0, 0, 0, 0)
 $samplecounter = 0
+$samplecalculate = 0
 
 $channel_datas = New-Object 'int[,]' $samplecount, $samplechannels
+
 $channel_datas.Clear()
 
 $DebugPreference = "Continue"
@@ -24,14 +26,6 @@ function GetSampleDatas() {
         $Minimum = $i * 1800
         $Maximum = $Minimum + 1000
         $value = Get-Random -Minimum $Minimum -Maximum $Maximum
-        <#        $channel_datas[$i] = $value
-        if ($value -gt $maxvalues[$i]) {
-            $maxvalues[$i] = $value
-        }
-        if ($value -lt $minvalues[$i]) {
-            $minvalues[$i] = $value
-        }
-        $integralvalues[$i] += $value#>
         $one_channel[$i] = $value
     }
 }
@@ -62,37 +56,65 @@ do {
     Start-Sleep -Milliseconds 1000
     GetSampleDatas
     Write-Debug "Sample($samplecounter) -> One Channel : $one_channel"
-    if ($samplecounter -ge ($samplecount)) {
-        ShiftChannelDatas
-        MoveChannelDatas ($samplecounter - 1)
+
+    if ($samplecounter -eq ($samplecount - 1)) {
+        MoveChannelDatas $samplecounter
+        $samplecounter = 0 
+        $samplecalculate = 1
     }
     else {
         MoveChannelDatas $samplecounter
     }
+
+    <#        if ($samplecounter -ge ($samplecount)) {
+            ShiftChannelDatas
+            MoveChannelDatas ($samplecounter - 1)
+        }
+        else {
+            MoveChannelDatas $samplecounter
+        
+        }#>
+
     $samplecounter++
     Write-Debug "Channel Datas : $channel_datas"
 
-    for ($i = 0; $i -lt $samplechannels; $i++) { 
-        if ($averagestrategy[$i] -eq 0) {
-            # average strategy = still value
-            $rawdata = $channel_datas[2, $i]
+    if ($samplecalculate) {
+
+        Write-Debug "Samplecalculate force."
+
+        for ($i = 0; $i -lt $samplechannels; $i++) { 
+            if ($averagestrategy[$i] -eq 0) {
+                # average strategy = still value
+                $rawdata = $channel_datas[2, $i]
+            }
+            if ($averagestrategy[$i] -eq 1) {
+                #averagestrategy = max. value
+                for ($j = 0; $j -lt $samplecount; $j++) {
+                    if ($channel_datas[$j, $i] -gt $maxvalues[$i]) {
+                        $maxvalues[$i] = $channel_datas[$j, $i]
+                    }
+                    if ($channel_datas[$j, $i] -lt $minvalues[$i]) {
+                        $minvalues[$i] = $channel_datas[$j, $i]
+                    }
+                }
+                $rawdata = $maxvalues[$i]
+            }
+            if ($averagestrategy[$i] -eq 2) {
+                #averagevalue = avreage value
+                for ($j = 0; $j -lt $samplecount; $j++) {
+                    $integralvalues[$i] += $channel_datas[$j, $i]
+                }
+                $rawdata = $integralvalues[$i] / $samplecount
+            }
+            $value = getValueFromRaw  $rawdata $ma4_values[$i] $ma20_values[$i] $dim0mAvalues[$i] $dim20mAvalues[$i] 
+            Write-Debug "getValueFromRaw = $value"
         }
-        if ($averagestrategy[$i] -eq 1) {
-            #averagestrategy = max. value
-            $rawdata = $maxvalues[$i]
-        }
-        if ($averagestrategy[$i] -eq 2) {
-            #averagevalue = avreage value
-    
-        }
-    
-        $value = getValueFromRaw  $rawdata $ma4_values[$i] $ma20_values[$i] $dim0mAvalues[$i] $dim20mAvalues[$i] 
-        Write-Debug "getValueFromRaw = $value"
+        
     
     }
 
 
-}while ($samplecounter -lt 4)
+}while ($samplecalculate -lt 1)
 
 <#do {
     Write-Debug "One Channel : $one_channel"
