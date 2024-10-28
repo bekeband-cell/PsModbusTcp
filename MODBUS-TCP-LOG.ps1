@@ -11,14 +11,15 @@ $filename = $dirname + "dd"
 $samplesec = 6    # sample times (1..6 Sample per minute)
 $samplecount = 3 # data save in sample times(6..24 x sample time)
 $samplechannels = 8
+$datacounter = 0
 
 $ma4_values = 0, 0, 0, 0, 0, 0, 0
 $ma20_values = 20000, 20000, 20000, 20000, 20000, 20000, 20000, 20000
 $dim0mAvalues = 0, 0, 0, 0, 0, 0, 0, 0
 $dim20mAvalues = 0.4, 0.3, 10, 1.3, 0.3, 0.3, 0.4, 0.5
+$GetMACADdress = 0
 
-
-[int32[][]]$channel_datas
+[int32[][]]$channel_datas = 0, 0, 0, 0, 0, 0, 0, 0
 
 # We are assume that 8 channels datas from MODBUS.
 $fileheader = "Date,Chan1,Chan2,Chan3,Chan4,Chan5,Chan6,Chan7,Chan8`n"
@@ -85,6 +86,10 @@ for ( $i = 0; $i -lt $args.count; $i++ ) {
         $DebugPreference = "Continue"
         Write-Debug("Debug ON.")
     }
+    if ($args[ $i ] -eq "-n") { 
+        $GetMACADdress = 1
+        Write-Debug("GetMACAddress = 1")
+    }
     if ($args[ $i ] -eq "-h") { 
         Quit("never mind.")
     }
@@ -118,34 +123,39 @@ function MakePathIfNoExist {
     }
 }
 
-Write-Host "$computername pinging."
-$test_ping = Test-Connection -Count 1 -Delay 1 -Quiet -ComputerName $computername
-if ($test_ping) {
-    Write-Host "Test ping succesfully : "
-    $read_mac_address = Read-HoldingRegisters -Address $computername -Port $portnumber -Reference 517 -Num 6
-    if ($null -ne $read_mac_address) { 
-        Write-Host "Test read MAC addres: $read_mac_address" 
+if ($GetMACADdress) {
+    Write-Host "$computername pinging."
+    $test_ping = Test-Connection -Count 1 -Delay 1 -Quiet -ComputerName $computername
+    if ($test_ping) {
+        Write-Host "Test ping succesfully : "
+        $read_mac_address = Read-HoldingRegisters -Address $computername -Port $portnumber -Reference 517 -Num 6
+        if ($null -ne $read_mac_address) { 
+            Write-Host "Test read MAC addres: $read_mac_address" 
+        }
+        else {
+            Write-Host "Test read MAC addres not succesfully!" 
+        }
     }
     else {
-        Write-Host "Test read MAC addres not succesfully!" 
+        Write-Host "Test ping failure!" 
     }
 }
 else {
-    Write-Host "Test ping failure!" 
+    Write-Host "No MAC address was choice." 
 }
 
-
-Start-Sleep -s 5
-
-Write-Host "Test read MAC addres not succesfully!" 
+# Start-Sleep -s 5
+ 
+Write-Debug "Start ask for $computername"
+Write-Debug "NextSampleSec = $nextsamplesec"
 
 do {
     # Sleep samplesec times
     #    Start-Sleep -Milliseconds ($samplesec * 1000)
     $second = (Get-Date).Second
-   
-    if ($second -eq ($nextsamplesec)) {
 
+    if ($second -eq ($nextsamplesec)) {
+        Write-Debug "$second -eq ($nextsamplesec)"
         $nextsamplesec = ++$samplesec_counter * $secstep
         if ($samplesec_counter -eq $samplesec) {
             $samplesec_counter = 0

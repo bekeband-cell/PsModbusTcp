@@ -15,6 +15,7 @@ $one_channel = @(0, 0, 0, 0, 0, 0, 0, 0)
 $samplecounter = 0
 $samplecalculate = 0
 
+
 $channel_datas = New-Object 'int[,]' $samplecount, $samplechannels
 
 $channel_datas.Clear()
