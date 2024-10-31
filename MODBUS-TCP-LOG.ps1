@@ -12,20 +12,54 @@ $samplesec = 6    # sample times (1..6 Sample per minute)
 $samplecount = 3 # data save in sample times(6..24 x sample time)
 $samplechannels = 8
 $datacounter = 0
+# here are the average values of channels
+$avervalues = 0, 0, 0, 0, 0, 0, 0, 0
+# average strategies of all channels. 0 = no average 1 = max. datas of samples 2 = average of samples
+$averagestrategy = 2, 1, 2, 2, 2, 0, 0, 0
 
 $ma4_values = 0, 0, 0, 0, 0, 0, 0
 $ma20_values = 20000, 20000, 20000, 20000, 20000, 20000, 20000, 20000
 $dim0mAvalues = 0, 0, 0, 0, 0, 0, 0, 0
 $dim20mAvalues = 0.4, 0.3, 10, 1.3, 0.3, 0.3, 0.4, 0.5
-$GetMACADdress = 0
+$GetMACAddress = 0
 
-[int32[][]]$channel_datas = 0, 0, 0, 0, 0, 0, 0, 0
+$one_channel = @(0, 0, 0, 0, 0, 0, 0, 0)
+
+#[int32[][]]$channel_datas = 0, 0, 0, 0, 0, 0, 0, 0
 
 # We are assume that 8 channels datas from MODBUS.
 $fileheader = "Date,Chan1,Chan2,Chan3,Chan4,Chan5,Chan6,Chan7,Chan8`n"
 
-#$stopwatch = [system.diagnostics.stopwatch]::StartNew()
-#$stopwatch.Elapsed
+# the avrage buffer.
+#$channel_datas = New-Object 'int[,]' $samplecount, $samplechannels
+
+$channel_datas = New-Object 'object[,]' $samplecount, $samplechannels
+
+# counter of incoming samples
+$samplecounter = 0
+
+#flag to calculate the sample
+$samplecalculate = 0
+
+#clear the average buffer
+$channel_datas.Clear()
+
+# GetSampleDatas() randomsample datas generator
+function GetSampleDatas() {
+    for ($i = 0; $i -lt $samplechannels; $i++) {
+        $Minimum = $i * 1800
+        $Maximum = $Minimum + 1000
+        $value = Get-Random -Minimum $Minimum -Maximum $Maximum
+        $one_channel[$i] = $value
+    }
+}
+
+# MoveChannelDatas($pos) move the sample datas inthe sample buffer
+function MoveChannelDatas($pos) {
+    for ($i = 0; $i -lt $samplechannels; $i++) {
+        $channel_datas[$pos, $i] = $one_channel[$i]
+    }
+}
 
 function MinMaxSetting($min, $max, $value) {
     if (($value -gt $max)) {
@@ -87,7 +121,7 @@ for ( $i = 0; $i -lt $args.count; $i++ ) {
         Write-Debug("Debug ON.")
     }
     if ($args[ $i ] -eq "-n") { 
-        $GetMACADdress = 1
+        $GetMACAddress = 1
         Write-Debug("GetMACAddress = 1")
     }
     if ($args[ $i ] -eq "-h") { 
@@ -123,7 +157,7 @@ function MakePathIfNoExist {
     }
 }
 
-if ($GetMACADdress) {
+if ($GetMACAddress) {
     Write-Host "$computername pinging."
     $test_ping = Test-Connection -Count 1 -Delay 1 -Quiet -ComputerName $computername
     if ($test_ping) {
@@ -151,10 +185,11 @@ Write-Debug "NextSampleSec = $nextsamplesec"
 
 do {
     # Sleep samplesec times
-    #    Start-Sleep -Milliseconds ($samplesec * 1000)
+    Start-Sleep -Milliseconds (4000)
     $second = (Get-Date).Second
 
-    if ($second -eq ($nextsamplesec)) {
+    if (1) {
+        #if ($second -eq ($nextsamplesec)) {
         Write-Debug "$second -eq ($nextsamplesec)"
         $nextsamplesec = ++$samplesec_counter * $secstep
         if ($samplesec_counter -eq $samplesec) {
@@ -162,6 +197,7 @@ do {
             $nextsamplesec = 0
         }
         Write-Debug "Second = $second"
+
         #    Test the computer ping.
         Write-Debug "$computername pinging."
         $test_ping = Test-Connection -Count 1 -Delay 1 -Quiet -ComputerName $computername
@@ -171,16 +207,39 @@ do {
             $datestring = Get-Date -Format "yyyy.MM.dd HH:mm:ss"
             Write-Debug "$computername ping: OK. Date: $datestring" 
             
-            $read_return = Read-HoldingRegisters -Address $computername -Port $portnumber -Reference $MODBUS_address -Num 8
-            
-            if ($null -ne $read_return) {
+            #        $read_return = Read-HoldingRegisters -Address $computername -Port $portnumber -Reference $MODBUS_address -Num 8
+            $one_channel = Read-HoldingRegisters -Address $computername -Port $portnumber -Reference $MODBUS_address -Num 8
+    
+            if ($null -ne $one_channel) {
                 $datestring = Get-Date -Format "yyyy.MM.dd HH:mm:ss"
-                Write-Debug "Succesfully read from MODBUS client. $datestring Readed datas: $read_return" 
-                if ($datacounter -lt $samplecount) {
-                    Write-Debug "DataCounter: $datacounter" 
+
+                Write-Debug "Succesfully read from MODBUS client. Sample($samplecounter) -> one Channel : $one_channel"
+
+                if ($samplecounter -eq ($samplecount - 1)) {
+                    MoveChannelDatas $samplecounter
+                    $samplecounter = 0 
+                    $samplecalculate = 1
+                }
+                else {
+                    MoveChannelDatas $samplecounter
+                    $samplecounter++
+                }
+
+
+                Write-Debug "Samplecounter: $samplecounter, Channel datas: $channel_datas"
+                # We have to calculate the average value
+                if ($samplecalculate) {
+                    Write-Debug "Samplecalculate forced." 
+                    $samplecalculate = 0
+                }
+
+
+                <#if ($datacounter -lt $samplecount) {
+                    Write-Debug "$datacounter -lt $samplecount" 
                 }
                 else {
                     $datacounter = 0
+                    Write-Debug "$datacounter -eq $samplecount"
                     Write-Debug "Write trend file: "
                     Write-Host "Computer: " $computername " Date: " $((Get-Date).ToString())
                     Write-Debug "datacounter = samplecount. Write csv file."
@@ -205,7 +264,7 @@ do {
                     }
 
                 }
-                $datacounter++
+                $datacounter++#>
                 <#                if ($datacounter -lt $samplecount) {
                     $datacounter++
                 }

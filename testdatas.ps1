@@ -14,9 +14,14 @@ $samplecount = 3
 $one_channel = @(0, 0, 0, 0, 0, 0, 0, 0)
 $samplecounter = 0
 $samplecalculate = 0
+$mustshift = 0
 
 
-$channel_datas = New-Object 'int[,]' $samplecount, $samplechannels
+$channel_datas = New-Object 'object[,]' $samplecount, $samplechannels
+#$channel_datas[$samplecount][$samplechannels]
+#$array = @(1, 2, @(0, 0, 0, 0, 0, 0, 0, 0), 3, 4, (10, 11, 12), 5)
+#$channel_datas = New-Object 'object[,]' $samplecount, $samplechannels
+ 
 
 $channel_datas.Clear()
 
@@ -57,16 +62,34 @@ do {
     Start-Sleep -Milliseconds 1000
     GetSampleDatas
     Write-Debug "Sample($samplecounter) -> One Channel : $one_channel"
-
-    if ($samplecounter -eq ($samplecount - 1)) {
-        MoveChannelDatas $samplecounter
-        $samplecounter = 0 
-        $samplecalculate = 1
+    Write-Debug "Before shift channel datas : $channel_datas"
+    if ($mustshift) {
+        ShiftChannelDatas
+        Write-Debug "After shift channel datas : $channel_datas"
+        MoveChannelDatas ($samplecount - 1)
     }
     else {
         MoveChannelDatas $samplecounter
     }
+    Write-Debug "Channel Datas : $channel_datas"
+    if ($samplecounter -eq ($samplecount - 1)) {
+        $mustshift = 1
+        $samplecalculate = 1
+        $samplecounter = 0
+    }
+    else {
+        $samplecounter++
+    }
 
+    <#    if ($mustshift) {
+
+        MoveChannelDatas ($samplecount - 1)
+    }
+    else {
+        MoveChannelDatas $samplecounter
+        $samplecounter = 0 
+
+    }#>
     <#        if ($samplecounter -ge ($samplecount)) {
             ShiftChannelDatas
             MoveChannelDatas ($samplecounter - 1)
@@ -76,13 +99,13 @@ do {
         
         }#>
 
-    $samplecounter++
-    Write-Debug "Channel Datas : $channel_datas"
+
+
 
     if ($samplecalculate) {
 
         Write-Debug "Samplecalculate force."
-
+        $samplecalculate = 0
         for ($i = 0; $i -lt $samplechannels; $i++) { 
             if ($averagestrategy[$i] -eq 0) {
                 # average strategy = still value
@@ -107,7 +130,7 @@ do {
                 }
                 $rawdata = $integralvalues[$i] / $samplecount
             }
-            $value = getValueFromRaw  $rawdata $ma4_values[$i] $ma20_values[$i] $dim0mAvalues[$i] $dim20mAvalues[$i] 
+            #            $value = getValueFromRaw  $rawdata $ma4_values[$i] $ma20_values[$i] $dim0mAvalues[$i] $dim20mAvalues[$i] 
             Write-Debug "getValueFromRaw = $value"
         }
         
@@ -115,8 +138,9 @@ do {
     }
 
 
-}while ($samplecalculate -lt 1)
-
+}
+#while ($samplecalculate -lt 1)
+while (1)
 <#do {
     Write-Debug "One Channel : $one_channel"
     for ($j = 0; $j -lt $samplecount; $j++) {
