@@ -12,7 +12,6 @@ $samplesec = 6    # sample times (1..6 Sample per minute)
 $samplecount = 3 # data save in sample times(6..24 x sample time)
 $samplechannels = 3
 
-$
 
 # on/off channels
 $onoffchannels = 1, 1, 1, 0, 0, 0, 0, 0
