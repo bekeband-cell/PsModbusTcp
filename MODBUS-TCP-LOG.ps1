@@ -10,22 +10,39 @@ $dirname = "yyyyMM"
 $filename = $dirname + "dd"
 $samplesec = 6    # sample times (1..6 Sample per minute)
 $samplecount = 3 # data save in sample times(6..24 x sample time)
-$samplechannels = 8
-$datacounter = 0
-# here are the average values of channels
-$avervalues = 0, 0, 0, 0, 0, 0, 0, 0
+$samplechannels = 3
+
+$
+
+# on/off channels
+$onoffchannels = 1, 1, 1, 0, 0, 0, 0, 0
+
+$averagestrategy = 2, 1, 2, 2, 2, 0, 0, 0
+
 # average strategies of all channels. 0 = no average 1 = max. datas of samples 2 = average of samples
 $averagestrategy = 2, 1, 2, 2, 2, 0, 0, 0
 
-$ma4_values = 0, 0, 0, 0, 0, 0, 0
+$ma4_values = 20, 0, 0, 0, 0, 0, 0, 0
 $ma20_values = 20000, 20000, 20000, 20000, 20000, 20000, 20000, 20000
+
+$maxvalues = 0, 0, 0, 0, 0, 0, 0, 0
+$minvalues = 20000, 20000, 20000, 20000, 20000, 20000, 20000, 20000
+
+# integrsted values os channels.
+$integralvalues = 0, 0, 0, 0, 0, 0, 0, 0
+
+# 0 mA values of dimension 
 $dim0mAvalues = 0, 0, 0, 0, 0, 0, 0, 0
+# 20 mA values of dimension
 $dim20mAvalues = 0.4, 0.3, 10, 1.3, 0.3, 0.3, 0.4, 0.5
+# is that getting MAC address or is'nt
 $GetMACAddress = 0
 
+# one channel buffer
 $one_channel = @(0, 0, 0, 0, 0, 0, 0, 0)
 
-#[int32[][]]$channel_datas = 0, 0, 0, 0, 0, 0, 0, 0
+# file write out buffer.
+$out_buffer = 0, 0, 0, 0, 0, 0, 0, 0
 
 # We are assume that 8 channels datas from MODBUS.
 $fileheader = "Date,Chan1,Chan2,Chan3,Chan4,Chan5,Chan6,Chan7,Chan8`n"
@@ -46,13 +63,12 @@ $channel_datas.Clear()
 # have to shift the input buffer?
 $mustshift = 0
 
-# GetSampleDatas() randomsample datas generator
-function GetSampleDatas() {
-    for ($i = 0; $i -lt $samplechannels; $i++) {
-        $Minimum = $i * 1800
-        $Maximum = $Minimum + 1000
-        $value = Get-Random -Minimum $Minimum -Maximum $Maximum
-        $one_channel[$i] = $value
+
+function ShiftChannelDatas {
+    for ($j = 1; $j -lt ($samplecount); $j++) {
+        for ($i = 0; $i -lt $samplechannels; $i++) {
+            $channel_datas[($j - 1), $i] = $channel_datas[$j, $i]
+        }
     }
 }
 
@@ -83,7 +99,14 @@ Function Quit($Text) {
     Break Script
 } 
 
-# $samplesec = MinMaxSetting 1 30 "3"
+function getValueFromRaw($rawvalue, $minraw, $maxraw, $minvalue, $maxvalue) {
+    Write-Debug "getValueFromRaw($rawvalue, $minraw, $maxraw, $minvalue, $maxvalue)"
+    if ($rawvalue -lt $minraw) { return "LoERR" }    
+    if ($rawvalue -gt $maxraw) { return "HiERR" }
+    $slope = ($maxvalue - $minvalue) / ($maxraw - $minraw)
+    Write-Debug "Slope = $slope"
+    return (($rawvalue - $minraw) * $slope) + $minvalue
+}
 
 for ( $i = 0; $i -lt $args.count; $i++ ) {
     if ($args[ $i ] -eq "-c") { 
@@ -132,9 +155,6 @@ for ( $i = 0; $i -lt $args.count; $i++ ) {
 }
 
 $outstring = ""
-
-$DebugPreference = "SilentlyContinue"
-$DebugPreference = "Continue"
 
 $secstep = 60 / $samplesec
 Write-Debug("SecStep = $secstep")
@@ -214,7 +234,7 @@ do {
             if ($null -ne $one_channel) {
                 $datestring = Get-Date -Format "yyyy.MM.dd HH:mm:ss"
 
-                Write-Debug "Succesfully read from MODBUS client. Sample($samplecounter) -> one Channel : $one_channel"
+                Write-Host "Succesfully read from MODBUS client. Sample($samplecounter) -> one Channel : $one_channel"
                 Write-Debug "Before shift channel datas : $channel_datas"
                 if ($mustshift) {
                     ShiftChannelDatas
@@ -235,31 +255,41 @@ do {
                     $samplecounter++
                 }
 
-                <#if ($samplecounter -eq ($samplecount - 1)) {
-                    MoveChannelDatas $samplecounter
-                    $samplecounter = 0 
-                    $samplecalculate = 1
-                }
-                else {
-                    MoveChannelDatas $samplecounter
-                    $samplecounter++
-                }#>
-
-
-
                 # We have to calculate the average value
                 if ($samplecalculate) {
                     Write-Debug "Samplecalculate forced." 
                     $samplecalculate = 0
-                }
 
+                    for ($i = 0; $i -lt $samplechannels; $i++) { 
+                        if ($averagestrategy[$i] -eq 0) {
+                            # average strategy = still value
+                            $rawdata = $channel_datas[2, $i]
+                        }
+                        if ($averagestrategy[$i] -eq 1) {
+                            #averagestrategy = max. value
+                            for ($j = 0; $j -lt $samplecount; $j++) {
+                                if ($channel_datas[$j, $i] -gt $maxvalues[$i]) {
+                                    $maxvalues[$i] = $channel_datas[$j, $i]
+                                }
+                                if ($channel_datas[$j, $i] -lt $minvalues[$i]) {
+                                    $minvalues[$i] = $channel_datas[$j, $i]
+                                }
+                            }
+                            $rawdata = $maxvalues[$i]
+                        }
+                        if ($averagestrategy[$i] -eq 2) {
+                            #averagevalue = avreage value
+                            for ($j = 0; $j -lt $samplecount; $j++) {
+                                
+                                $integralvalues[$i] += $channel_datas[$j, $i]
+                            }
+                            $rawdata = $integralvalues[$i] / $samplecount
+                        }
+                        $value = getValueFromRaw  $rawdata $ma4_values[$i] $ma20_values[$i] $dim0mAvalues[$i] $dim20mAvalues[$i]
+                        $out_buffer[$i] = $value 
+                        Write-Debug "Outbuffer = $out_buffer"
+                    }            
 
-                <#if ($datacounter -lt $samplecount) {
-                    Write-Debug "$datacounter -lt $samplecount" 
-                }
-                else {
-                    $datacounter = 0
-                    Write-Debug "$datacounter -eq $samplecount"
                     Write-Debug "Write trend file: "
                     Write-Host "Computer: " $computername " Date: " $((Get-Date).ToString())
                     Write-Debug "datacounter = samplecount. Write csv file."
@@ -273,53 +303,25 @@ do {
                         Write-Debug "$logoname exists!"
                         $datestring = Get-Date -Format "yyyy.MM.dd HH:mm:ss"
                         $outstring = $datestring
-                        foreach ($data in $read_return) {
-                            $outstring += ',' + $data
+                        $i = 0
+                        foreach ($data in $out_buffer) {
+                            if ($onoffchannels[$i]) {
+                                $outstring += ',' + $data
+                            }
+                            else {
+                                $outstring += ',N/A'
+                            }
+
+                            $i++
                         }
+                        Write-Host "Computer: " $computername " : "  $outstring
                         Add-Content -Path $logoname -Value $outstring
                     }
                     else {
                         New-Item -Path . -Name "$logoname" -ItemType "file" -Value "$fileheader"
-                        #                MakePathIfNoExist -PathString "$logoname"
+                        # MakePathIfNoExist -PathString "$logoname"
                     }
-
                 }
-                $datacounter++#>
-                <#                if ($datacounter -lt $samplecount) {
-                    $datacounter++
-                }
-                else {
-                    $datacounter = 0
-                    Write-Host "Computer: " $computername " Date: " $((Get-Date).ToString())
-
-                    Write-Debug "datacounter = samplecount. Write csv file."
-                    $YMdir = $output_directory + (Get-Date).tostring($dirname)
-                    $YMDdir = $YMdir + '\' + (Get-Date).tostring($filename)
-                    
-                    $logoname = $YMDdir + '.csv'
-    
-                    MakePathIfNoExist -PathString "$YMdir"
-    
-                    if (Test-Path -Path "$logoname") {
-                        Write-Debug "$logoname exists!"
-                        $datestring = Get-Date -Format "yyyy.MM.dd HH:mm:ss"
-                        $outstring = $datestring
-                        foreach ($data in $read_return) {
-                            $outstring += ',' + $data
-                        }
-                        Add-Content -Path $logoname -Value $outstring
-                    }
-                    else {
-                        New-Item -Path . -Name "$logoname" -ItemType "file" -Value "$fileheader"
-                        #                MakePathIfNoExist -PathString "$logoname"
-                    }
-
-                }
-
-            Write-Host "Readed data: " $read_return
-            # here to write to file
-            # filename making#>
-                 
 
             }
             else {
@@ -333,12 +335,7 @@ do {
             Write-Debug "Error!" 
             $datacounter = 0
         }
-        #Write-Host "MODBUS cliensek pingelése " + $servers[$i]
-        #    Test-Connection -ComputerName $servers[$i] -Count 2
     
     }
 }while (1)
 
-
-
-#Read-HoldingRegisters -Address 127.0.0.1 -Port 502 -Reference 0 -Num 8
