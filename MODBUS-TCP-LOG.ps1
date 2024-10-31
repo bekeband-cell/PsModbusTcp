@@ -43,6 +43,8 @@ $samplecalculate = 0
 
 #clear the average buffer
 $channel_datas.Clear()
+# have to shift the input buffer?
+$mustshift = 0
 
 # GetSampleDatas() randomsample datas generator
 function GetSampleDatas() {
@@ -207,15 +209,33 @@ do {
             $datestring = Get-Date -Format "yyyy.MM.dd HH:mm:ss"
             Write-Debug "$computername ping: OK. Date: $datestring" 
             
-            #        $read_return = Read-HoldingRegisters -Address $computername -Port $portnumber -Reference $MODBUS_address -Num 8
             $one_channel = Read-HoldingRegisters -Address $computername -Port $portnumber -Reference $MODBUS_address -Num 8
     
             if ($null -ne $one_channel) {
                 $datestring = Get-Date -Format "yyyy.MM.dd HH:mm:ss"
 
                 Write-Debug "Succesfully read from MODBUS client. Sample($samplecounter) -> one Channel : $one_channel"
+                Write-Debug "Before shift channel datas : $channel_datas"
+                if ($mustshift) {
+                    ShiftChannelDatas
+                    Write-Debug "After shift channel datas : $channel_datas"
+                    MoveChannelDatas ($samplecount - 1)
+                }
+                else {
+                    MoveChannelDatas $samplecounter
+                }
 
+                Write-Debug "Sample($samplecounter) -> Channel Datas : $channel_datas"
                 if ($samplecounter -eq ($samplecount - 1)) {
+                    $mustshift = 1
+                    $samplecalculate = 1
+                    $samplecounter = 0
+                }
+                else {
+                    $samplecounter++
+                }
+
+                <#if ($samplecounter -eq ($samplecount - 1)) {
                     MoveChannelDatas $samplecounter
                     $samplecounter = 0 
                     $samplecalculate = 1
@@ -223,10 +243,10 @@ do {
                 else {
                     MoveChannelDatas $samplecounter
                     $samplecounter++
-                }
+                }#>
 
 
-                Write-Debug "Samplecounter: $samplecounter, Channel datas: $channel_datas"
+
                 # We have to calculate the average value
                 if ($samplecalculate) {
                     Write-Debug "Samplecalculate forced." 

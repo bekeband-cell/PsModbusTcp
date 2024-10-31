@@ -1,13 +1,13 @@
 
 
-$ma4_values = 20, 0, 0, 0, 0, 0, 0
+$ma4_values = 20, 0, 0, 0, 0, 0, 0, 0
 $ma20_values = 20000, 20000, 20000, 20000, 20000, 20000, 20000, 20000
 $dim0mAvalues = 0, 0, 0, 0, 0, 0, 0, 0
 $dim20mAvalues = 0.4, 0.3, 10, 1.3, 0.3, 0.3, 0.4, 0.5
 $maxvalues = 0, 0, 0, 0, 0, 0, 0, 0
 $minvalues = 20000, 20000, 20000, 20000, 20000, 20000, 20000, 20000
 $integralvalues = 0, 0, 0, 0, 0, 0, 0, 0
-$avervalues = 0, 0, 0, 0, 0, 0, 0, 0
+
 $averagestrategy = 2, 1, 2, 2, 2, 0, 0, 0
 $samplechannels = 8
 $samplecount = 3
@@ -18,10 +18,6 @@ $mustshift = 0
 
 
 $channel_datas = New-Object 'object[,]' $samplecount, $samplechannels
-#$channel_datas[$samplecount][$samplechannels]
-#$array = @(1, 2, @(0, 0, 0, 0, 0, 0, 0, 0), 3, 4, (10, 11, 12), 5)
-#$channel_datas = New-Object 'object[,]' $samplecount, $samplechannels
- 
 
 $channel_datas.Clear()
 
@@ -81,27 +77,7 @@ do {
         $samplecounter++
     }
 
-    <#    if ($mustshift) {
-
-        MoveChannelDatas ($samplecount - 1)
-    }
-    else {
-        MoveChannelDatas $samplecounter
-        $samplecounter = 0 
-
-    }#>
-    <#        if ($samplecounter -ge ($samplecount)) {
-            ShiftChannelDatas
-            MoveChannelDatas ($samplecounter - 1)
-        }
-        else {
-            MoveChannelDatas $samplecounter
-        
-        }#>
-
-
-
-
+    # here calculate the values.
     if ($samplecalculate) {
 
         Write-Debug "Samplecalculate force."
@@ -130,7 +106,7 @@ do {
                 }
                 $rawdata = $integralvalues[$i] / $samplecount
             }
-            #            $value = getValueFromRaw  $rawdata $ma4_values[$i] $ma20_values[$i] $dim0mAvalues[$i] $dim20mAvalues[$i] 
+            $value = getValueFromRaw  $rawdata $ma4_values[$i] $ma20_values[$i] $dim0mAvalues[$i] $dim20mAvalues[$i] 
             Write-Debug "getValueFromRaw = $value"
         }
         
