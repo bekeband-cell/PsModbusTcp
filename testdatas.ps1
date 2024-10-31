@@ -1,22 +1,23 @@
 
 
-$ma4_values = 20, 0, 0, 0, 0, 0, 0
+$ma4_values = 20, 0, 0, 0, 0, 0, 0, 0
 $ma20_values = 20000, 20000, 20000, 20000, 20000, 20000, 20000, 20000
 $dim0mAvalues = 0, 0, 0, 0, 0, 0, 0, 0
 $dim20mAvalues = 0.4, 0.3, 10, 1.3, 0.3, 0.3, 0.4, 0.5
 $maxvalues = 0, 0, 0, 0, 0, 0, 0, 0
 $minvalues = 20000, 20000, 20000, 20000, 20000, 20000, 20000, 20000
 $integralvalues = 0, 0, 0, 0, 0, 0, 0, 0
-$avervalues = 0, 0, 0, 0, 0, 0, 0, 0
+
 $averagestrategy = 2, 1, 2, 2, 2, 0, 0, 0
 $samplechannels = 8
 $samplecount = 3
 $one_channel = @(0, 0, 0, 0, 0, 0, 0, 0)
 $samplecounter = 0
 $samplecalculate = 0
+$mustshift = 0
 
 
-$channel_datas = New-Object 'int[,]' $samplecount, $samplechannels
+$channel_datas = New-Object 'object[,]' $samplecount, $samplechannels
 
 $channel_datas.Clear()
 
@@ -57,32 +58,30 @@ do {
     Start-Sleep -Milliseconds 1000
     GetSampleDatas
     Write-Debug "Sample($samplecounter) -> One Channel : $one_channel"
-
-    if ($samplecounter -eq ($samplecount - 1)) {
-        MoveChannelDatas $samplecounter
-        $samplecounter = 0 
-        $samplecalculate = 1
+    Write-Debug "Before shift channel datas : $channel_datas"
+    if ($mustshift) {
+        ShiftChannelDatas
+        Write-Debug "After shift channel datas : $channel_datas"
+        MoveChannelDatas ($samplecount - 1)
     }
     else {
         MoveChannelDatas $samplecounter
     }
-
-    <#        if ($samplecounter -ge ($samplecount)) {
-            ShiftChannelDatas
-            MoveChannelDatas ($samplecounter - 1)
-        }
-        else {
-            MoveChannelDatas $samplecounter
-        
-        }#>
-
-    $samplecounter++
     Write-Debug "Channel Datas : $channel_datas"
+    if ($samplecounter -eq ($samplecount - 1)) {
+        $mustshift = 1
+        $samplecalculate = 1
+        $samplecounter = 0
+    }
+    else {
+        $samplecounter++
+    }
 
+    # here calculate the values.
     if ($samplecalculate) {
 
         Write-Debug "Samplecalculate force."
-
+        $samplecalculate = 0
         for ($i = 0; $i -lt $samplechannels; $i++) { 
             if ($averagestrategy[$i] -eq 0) {
                 # average strategy = still value
@@ -115,8 +114,9 @@ do {
     }
 
 
-}while ($samplecalculate -lt 1)
-
+}
+#while ($samplecalculate -lt 1)
+while (1)
 <#do {
     Write-Debug "One Channel : $one_channel"
     for ($j = 0; $j -lt $samplecount; $j++) {
