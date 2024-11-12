@@ -9,21 +9,21 @@ $output_directory = ".\DATAS\"
 $dirname = "yyyyMM"
 $filename = $dirname + "dd"
 $samplesec = 6    # sample times (1..6 Sample per minute)
-$samplecount = 3 # data save in sample times(6..24 x sample time)
-$samplechannels = 3
-
+$samplecount = 2 # data save in sample times(6..24 x sample time)
+$samplechannels = 2
 
 # on/off channels
-$onoffchannels = 1, 1, 1, 0, 0, 0, 0, 0
+$onoffchannels = 1, 1, 0, 0, 0, 0, 0, 0
 
 $averagestrategy = 2, 1, 2, 2, 2, 0, 0, 0
 
 # average strategies of all channels. 0 = no average 1 = max. datas of samples 2 = average of samples
 $averagestrategy = 2, 1, 2, 2, 2, 0, 0, 0
 
-$ma4_values = 20, 0, 0, 0, 0, 0, 0, 0
+#
+$ma4_values = 0, 0, 0, 0, 0, 0, 0, 0
 $ma20_values = 20000, 20000, 20000, 20000, 20000, 20000, 20000, 20000
-
+#
 $maxvalues = 0, 0, 0, 0, 0, 0, 0, 0
 $minvalues = 20000, 20000, 20000, 20000, 20000, 20000, 20000, 20000
 
@@ -33,7 +33,7 @@ $integralvalues = 0, 0, 0, 0, 0, 0, 0, 0
 # 0 mA values of dimension 
 $dim0mAvalues = 0, 0, 0, 0, 0, 0, 0, 0
 # 20 mA values of dimension
-$dim20mAvalues = 0.4, 0.3, 10, 1.3, 0.3, 0.3, 0.4, 0.5
+$dim20mAvalues = 10, 10, 10, 1.3, 0.3, 0.3, 0.4, 0.5
 # is that getting MAC address or is'nt
 $GetMACAddress = 0
 
@@ -48,8 +48,10 @@ $fileheader = "Date,Chan1,Chan2,Chan3,Chan4,Chan5,Chan6,Chan7,Chan8`n"
 
 # the avrage buffer.
 #$channel_datas = New-Object 'int[,]' $samplecount, $samplechannels
+# maximálisan bállítható mintaszám.
+$max_samplecount = 30
 
-$channel_datas = New-Object 'object[,]' $samplecount, $samplechannels
+$channel_datas = New-Object 'object[,]' ($max_samplecount * 6), $samplechannels
 
 # counter of incoming samples
 $samplecounter = 0
@@ -90,7 +92,6 @@ function MinMaxSetting($min, $max, $value) {
             return $value
         }
     }
- 
 }
 
 Function Quit($Text) {
@@ -108,6 +109,10 @@ function getValueFromRaw($rawvalue, $minraw, $maxraw, $minvalue, $maxvalue) {
 }
 
 for ( $i = 0; $i -lt $args.count; $i++ ) {
+    if ($args[ $i ] -eq "-o") { 
+        $output_directory = $args[ $i + 1 ]
+        Write-Debug("Output directory = $output_directory") 
+    }
     if ($args[ $i ] -eq "-c") { 
         $computername = $args[ $i + 1 ] 
         Write-Debug("ComputerName = $computername") 
@@ -115,14 +120,6 @@ for ( $i = 0; $i -lt $args.count; $i++ ) {
     if ($args[ $i ] -eq "-p") { 
         $portnumber = $args[ $i + 1 ] 
         Write-Debug("PortNumber = $portnumber") 
-    }
-    if ($args[ $i ] -eq "-e") { 
-        $dirname = $args[ $i + 1 ]
-        Write-Debug("DirName = $dirname") 
-    }
-    if ($args[ $i ] -eq "-f") { 
-        $filename = $args[ $i + 1 ] 
-        Write-Debug("FileName = $filename")
     }
     if ($args[ $i ] -eq "-g") { 
         $samplesec = MinMaxSetting 1 6 $args[ $i + 1 ]
@@ -133,7 +130,7 @@ for ( $i = 0; $i -lt $args.count; $i++ ) {
         Write-Debug("Samplechannels = $samplechannels")
     }
     if ($args[ $i ] -eq "-j") { 
-        $samplecount = MinMaxSetting 2 24 $args[ $i + 1 ] 
+        $samplecount = MinMaxSetting 2 $max_samplecount $args[ $i + 1 ] 
         Write-Debug("Samplecount = $samplecount")
     }
     if ($args[ $i ] -eq "-k") { 
@@ -160,8 +157,6 @@ Write-Debug("SecStep = $secstep")
 $nextsamplesec = 0
 $samplesec_counter = 0
 
-"MODBUS READING PROGRAM START:" 
-"Date and time is: $((Get-Date).ToString())"
 
 # .\Path
 function MakePathIfNoExist {
@@ -201,16 +196,37 @@ else {
 
 # Start-Sleep -s 5
  
+if ($DebugPreference -ne "Continue") {
+    Write-Host "Waiting for 00:00 sec:min"
+    $counter = 0
+    while (((Get-Date).Second -ne 0) -or ((Get-Date).Minute % 10) -ne 0) {
+        $sec = (Get-Date).Second
+        $min = (Get-Date).Minute
+        Start-Sleep -Milliseconds (500)
+        Write-Debug  "Sec : $sec, Min = $min" 
+        if ($counter -ge 10) {
+            Write-Host "Sec : $sec, Min = $min"
+            $counter = 0
+        }
+        else {
+
+        }
+        $counter++
+    }
+}
+
+Write-Host "Start program at $((Get-Date).ToString())"
 Write-Debug "Start ask for $computername"
 Write-Debug "NextSampleSec = $nextsamplesec"
 
 do {
     # Sleep samplesec times
-    Start-Sleep -Milliseconds (4000)
+    #    
+
     $second = (Get-Date).Second
 
-    if (1) {
-        #if ($second -eq ($nextsamplesec)) {
+    #if (1) {
+    if ($second -eq ($nextsamplesec)) {
         Write-Debug "$second -eq ($nextsamplesec)"
         $nextsamplesec = ++$samplesec_counter * $secstep
         if ($samplesec_counter -eq $samplesec) {
@@ -314,18 +330,24 @@ do {
                             $i++
                         }
                         Write-Host "Computer: " $computername " : "  $outstring
-                        Add-Content -Path $logoname -Value $outstring
+                        try {
+                            Add-Content -Path $logoname -Value $outstring
+                        }
+                        catch {
+                            Write-Host "File write Error: $computername" 
+                        }
+
                     }
                     else {
-                        New-Item -Path . -Name "$logoname" -ItemType "file" -Value "$fileheader"
-                        # MakePathIfNoExist -PathString "$logoname"
+                        Write-Debug "Outfile Name = $logoname, file = $fileheader"
+                        New-Item -Path $logoname -ItemType "file" -Value $fileheader
+                        # MakePathIfNoExist -PathString "$logoname" -Path $YMdir 
                     }
                 }
 
             }
             else {
                 Write-Host "No read from MODBUS client." -ForegroundColor Red
-                $datacounter = 0
             }
 
         }
