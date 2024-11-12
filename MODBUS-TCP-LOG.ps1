@@ -2,14 +2,15 @@
 . .\PsModbusTcp.ps1
 
 #Arguments from command line. These are default value as well.
-$computername = "172.30.10.244"
+#$computername = "172.30.10.244"
+$computername = "localhost"
 $portnumber = "502"
 $MODBUS_address = '0'
 $output_directory = ".\DATAS\"
 $dirname = "yyyyMM"
 $filename = $dirname + "dd"
 $samplesec = 6    # sample times (1..6 Sample per minute)
-$samplecount = 2 # data save in sample times(6..24 x sample time)
+$samplecount = 30 # data save in sample times(2..30 x sample time)
 $samplechannels = 2
 
 # on/off channels
@@ -18,7 +19,7 @@ $onoffchannels = 1, 1, 0, 0, 0, 0, 0, 0
 $averagestrategy = 2, 1, 2, 2, 2, 0, 0, 0
 
 # average strategies of all channels. 0 = no average 1 = max. datas of samples 2 = average of samples
-$averagestrategy = 2, 1, 2, 2, 2, 0, 0, 0
+$averagestrategy = 2, 2, 2, 2, 2, 0, 0, 0
 
 #
 $ma4_values = 0, 0, 0, 0, 0, 0, 0, 0
@@ -33,7 +34,7 @@ $integralvalues = 0, 0, 0, 0, 0, 0, 0, 0
 # 0 mA values of dimension 
 $dim0mAvalues = 0, 0, 0, 0, 0, 0, 0, 0
 # 20 mA values of dimension
-$dim20mAvalues = 10, 10, 10, 1.3, 0.3, 0.3, 0.4, 0.5
+$dim20mAvalues = 20000, 50, 10, 1.3, 0.3, 0.3, 0.4, 0.5
 # is that getting MAC address or is'nt
 $GetMACAddress = 0
 
@@ -44,7 +45,7 @@ $one_channel = @(0, 0, 0, 0, 0, 0, 0, 0)
 $out_buffer = 0, 0, 0, 0, 0, 0, 0, 0
 
 # We are assume that 8 channels datas from MODBUS.
-$fileheader = "Date,Chan1,Chan2,Chan3,Chan4,Chan5,Chan6,Chan7,Chan8`n"
+$fileheader = "Date,Klorbenzol,Merkaptan,Chan3,Chan4,Chan5,Chan6,Chan7,Chan8`n"
 
 # the avrage buffer.
 #$channel_datas = New-Object 'int[,]' $samplecount, $samplechannels
@@ -63,7 +64,8 @@ $samplecalculate = 0
 $channel_datas.Clear()
 # have to shift the input buffer?
 $mustshift = 0
-
+#We have to wait the whole minute and 0 sec?
+$NoWaitStartTime = 0
 
 function ShiftChannelDatas {
     for ($j = 1; $j -lt ($samplecount); $j++) {
@@ -145,6 +147,10 @@ for ( $i = 0; $i -lt $args.count; $i++ ) {
         $GetMACAddress = 1
         Write-Debug("GetMACAddress = 1")
     }
+    if ($args[ $i ] -eq "-m") { 
+        $NoWaitStartTime = 1
+        Write-Debug("NoWaitStartTime = 1")
+    }
     if ($args[ $i ] -eq "-h") { 
         Quit("never mind.")
     }
@@ -196,10 +202,11 @@ else {
 
 # Start-Sleep -s 5
  
-if ($DebugPreference -ne "Continue") {
+if ($NoWaitStartTime -eq 0) {
     Write-Host "Waiting for 00:00 sec:min"
     $counter = 0
     while (((Get-Date).Second -ne 0) -or ((Get-Date).Minute % 10) -ne 0) {
+        #    while (((Get-Date).Second -ne 0)) {
         $sec = (Get-Date).Second
         $min = (Get-Date).Minute
         Start-Sleep -Milliseconds (500)
@@ -215,8 +222,11 @@ if ($DebugPreference -ne "Continue") {
     }
 }
 
+# Start-Sleep -Milliseconds 1000
+
 Write-Host "Start program at $((Get-Date).ToString())"
 Write-Debug "Start ask for $computername"
+$nextsamplesec += $secstep
 Write-Debug "NextSampleSec = $nextsamplesec"
 
 do {
@@ -228,7 +238,10 @@ do {
     #if (1) {
     if ($second -eq ($nextsamplesec)) {
         Write-Debug "$second -eq ($nextsamplesec)"
-        $nextsamplesec = ++$samplesec_counter * $secstep
+        $nextsamplesec += $secstep
+        if ($nextsamplesec -ge 60) {
+            $nextsamplesec -= 60
+        }
         if ($samplesec_counter -eq $samplesec) {
             $samplesec_counter = 0
             $nextsamplesec = 0
@@ -236,9 +249,9 @@ do {
         Write-Debug "Second = $second"
 
         #    Test the computer ping.
-        Write-Debug "$computername pinging."
-        $test_ping = Test-Connection -Count 1 -Delay 1 -Quiet -ComputerName $computername
-
+        #        Write-Debug "$computername pinging."
+        #        $test_ping = Test-Connection -Count 1 -Delay 1 -Quiet -ComputerName $computername
+        $test_ping = 1
         if ($test_ping) {
 
             $datestring = Get-Date -Format "yyyy.MM.dd HH:mm:ss"
@@ -249,18 +262,18 @@ do {
             if ($null -ne $one_channel) {
                 $datestring = Get-Date -Format "yyyy.MM.dd HH:mm:ss"
 
-                Write-Host "Succesfully read from MODBUS client. Sample($samplecounter) -> one Channel : $one_channel"
-                Write-Debug "Before shift channel datas : $channel_datas"
+                Write-Host "Data ready. Sample($samplecounter) Time: $((Get-Date).ToString()) -> one Channel : $one_channel"
+                #                Write-Debug "Before shift channel datas : $channel_datas"
                 if ($mustshift) {
                     ShiftChannelDatas
-                    Write-Debug "After shift channel datas : $channel_datas"
+                    #                    Write-Debug "After shift channel datas : $channel_datas"
                     MoveChannelDatas ($samplecount - 1)
                 }
                 else {
                     MoveChannelDatas $samplecounter
                 }
 
-                Write-Debug "Sample($samplecounter) -> Channel Datas : $channel_datas"
+                #                Write-Debug "Sample($samplecounter) -> Channel Datas : $channel_datas"
                 if ($samplecounter -eq ($samplecount - 1)) {
                     $mustshift = 1
                     $samplecalculate = 1
@@ -299,6 +312,7 @@ do {
                                 $integralvalues[$i] += $channel_datas[$j, $i]
                             }
                             $rawdata = $integralvalues[$i] / $samplecount
+                            $integralvalues[$i] = 0
                         }
                         $value = getValueFromRaw  $rawdata $ma4_values[$i] $ma20_values[$i] $dim0mAvalues[$i] $dim20mAvalues[$i]
                         $out_buffer[$i] = $value 
