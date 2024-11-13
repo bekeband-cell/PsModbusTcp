@@ -10,9 +10,9 @@ Parancssoros opciók:
 
 -c computername 'A MODBUS eszköz neve, vagy IP címe. Alapérték: "localhost"'
 -p portnumber A MODBUS/TCP port száma: Alapérték: 502
--d dirname A kimeneti könyvtár nevének mintája.
--f filename
--g samplesec Az adatok lekérdezésének gyakorisága 10 másodpercekben. Határok: 1...6, azaz a gyakoriságot 10 és 60 másodperc között lehet állítani.
+-d debug mód. (Csak tesztelésre)
+-g samplesec Az adatok lekérdezésének gyakorisága percenként másodpercekben. Határok: 1...6, azaz az 1-es gyakoriság 60 sec-es mintavételt jelent, a 6-os 10 sec-os mintavételt.
 -j samplecount Az adatok gyűjtésének és mentésének gyakorisága a lekérdezések függvényéban. Határok: 2..30. A trend mentés minden itt megadott minta olvasásakor megtörténik. Ezért, ha pl. a mintavétel gyakorisága 5 percenként (12 mp-ként történik), és a mentés minden 10. mintával történik, (-j 10), akkor 120 mp-ként ment egy trend adatot.
-
--k
+-m nem várja meg a mintavétel kezdetével az egész percet és másodpercet. (Csak tesztelési célra)
+-o a kimeneti könyvtár neve, ahova a csv fájl keletkezik.
+Jelenleg a

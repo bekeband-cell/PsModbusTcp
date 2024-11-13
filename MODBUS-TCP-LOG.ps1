@@ -2,8 +2,8 @@
 . .\PsModbusTcp.ps1
 
 #Arguments from command line. These are default value as well.
-#$computername = "172.30.10.244"
-$computername = "localhost"
+$computername = "172.30.10.244"
+#$computername = "localhost"
 $portnumber = "502"
 $MODBUS_address = '0'
 $output_directory = ".\DATAS\"
@@ -34,7 +34,7 @@ $integralvalues = 0, 0, 0, 0, 0, 0, 0, 0
 # 0 mA values of dimension 
 $dim0mAvalues = 0, 0, 0, 0, 0, 0, 0, 0
 # 20 mA values of dimension
-$dim20mAvalues = 20000, 50, 10, 1.3, 0.3, 0.3, 0.4, 0.5
+$dim20mAvalues = 100, 50, 10, 1.3, 0.3, 0.3, 0.4, 0.5
 # is that getting MAC address or is'nt
 $GetMACAddress = 0
 
