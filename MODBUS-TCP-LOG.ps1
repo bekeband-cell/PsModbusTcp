@@ -9,11 +9,13 @@ $output_directory = ".\DATAS\"
 $dirname = "yyyyMM"
 $filename = $dirname + "dd"
 $samplesec = 6    # sample times (1..6 Sample per minute)
-$samplecount = 2 # data save in sample times(6..24 x sample time)
+$samplecount = 30
+
+# data save in sample times(2..30 x sample time)
 $samplechannels = 2
 
 # on/off channels
-$onoffchannels = 1, 1, 0, 0, 0, 0, 0, 0
+$onoffchannels = 1, 1, 0, 0, 0, 0, 0, 0 
 
 $averagestrategy = 2, 1, 2, 2, 2, 0, 0, 0
 
@@ -33,7 +35,7 @@ $integralvalues = 0, 0, 0, 0, 0, 0, 0, 0
 # 0 mA values of dimension 
 $dim0mAvalues = 0, 0, 0, 0, 0, 0, 0, 0
 # 20 mA values of dimension
-$dim20mAvalues = 10, 10, 10, 1.3, 0.3, 0.3, 0.4, 0.5
+$dim20mAvalues = 50, 10, 10, 1.3, 0.3, 0.3, 0.4, 0.5
 # is that getting MAC address or is'nt
 $GetMACAddress = 0
 
@@ -195,7 +197,8 @@ else {
 }
 
 # Start-Sleep -s 5
- 
+$DebugPreference = "Continue" 
+
 if ($DebugPreference -ne "Continue") {
     Write-Host "Waiting for 00:00 sec:min"
     $counter = 0
@@ -307,7 +310,7 @@ do {
 
                     Write-Debug "Write trend file: "
                     Write-Host "Computer: " $computername " Date: " $((Get-Date).ToString())
-                    Write-Debug "datacounter = samplecount. Write csv file."
+                    Write-Host "datacounter = samplecount. Write csv file."
                     $YMdir = $output_directory + (Get-Date).tostring($dirname)
                     $YMDdir = $YMdir + '\' + (Get-Date).tostring($filename)
                     
