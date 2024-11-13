@@ -10,7 +10,7 @@ $integralvalues = 0, 0, 0, 0, 0, 0, 0, 0
 
 $averagestrategy = 2, 1, 2, 2, 2, 0, 0, 0
 $samplechannels = 8
-$samplecount = 3
+$samplecount = 10
 $one_channel = @(0, 0, 0, 0, 0, 0, 0, 0)
 $samplecounter = 0
 $samplecalculate = 0
@@ -54,10 +54,12 @@ function getValueFromRaw($rawvalue, $minraw, $maxraw, $minvalue, $maxvalue) {
     return (($rawvalue - $minraw) * $slope) + $minvalue
 }
 
+        Write-Host "Start program $((Get-Date).ToString())"
+
 do {
-    Start-Sleep -Milliseconds 1000
+
     GetSampleDatas
-    Write-Debug "Sample($samplecounter) -> One Channel : $one_channel"
+    Write-Debug "Sample($samplecounter) Time: $((Get-Date).ToString()) -> One Channel : $one_channel"
     Write-Debug "Before shift channel datas : $channel_datas"
     if ($mustshift) {
         ShiftChannelDatas
@@ -80,7 +82,8 @@ do {
     # here calculate the values.
     if ($samplecalculate) {
 
-        Write-Debug "Samplecalculate force."
+        Write-Debug "Samplecalculate force. "
+        Write-Host "At $((Get-Date).ToString())"
         $samplecalculate = 0
         for ($i = 0; $i -lt $samplechannels; $i++) { 
             if ($averagestrategy[$i] -eq 0) {
@@ -112,7 +115,7 @@ do {
         
     
     }
-
+    Start-Sleep -Milliseconds 1000
 
 }
 #while ($samplecalculate -lt 1)
