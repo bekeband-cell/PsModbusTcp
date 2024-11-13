@@ -368,7 +368,6 @@ do {
         else {
             Write-Debug "$computername ping" 
             Write-Debug "Error!" 
-            $datacounter = 0
         }
     
     }
