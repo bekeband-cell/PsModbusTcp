@@ -16,7 +16,7 @@ $samplechannels = 2
 # on/off channels
 $onoffchannels = 1, 1, 0, 0, 0, 0, 0, 0 
 
-$averagestrategy = 2, 1, 2, 2, 2, 0, 0, 0
+$averagestrategy = 2, 2, 2, 2, 2, 0, 0, 0
 
 # average strategies of all channels. 0 = no average 1 = max. datas of samples 2 = average of samples
 $averagestrategy = 2, 2, 2, 2, 2, 0, 0, 0
@@ -45,7 +45,7 @@ $one_channel = @(0, 0, 0, 0, 0, 0, 0, 0)
 $out_buffer = 0, 0, 0, 0, 0, 0, 0, 0
 
 # We are assume that 8 channels datas from MODBUS.
-$fileheader = "Date,Klorbenzol,Merkaptan,Chan3,Chan4,Chan5,Chan6,Chan7,Chan8`n"
+$fileheader = "Date,Klorbenzol,Merkaptan`n"
 
 # the avrage buffer.
 #$channel_datas = New-Object 'int[,]' $samplecount, $samplechannels
@@ -338,7 +338,7 @@ do {
                                 $outstring += ',' + $data
                             }
                             else {
-                                $outstring += ',N/A'
+                                $outstring += ',-'
                             }
 
                             $i++
